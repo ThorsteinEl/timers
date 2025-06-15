@@ -11,35 +11,42 @@
   background-repeat: no-repeat;
   background-attachment: fixed;
   color: white;
+  text-align: center; /* This centers inline content */
+  padding: 40px 20px; /* Optional: gives spacing around content */
 }
 
+#nextUp,
+#nextTimer {
+  display: inline-block; /* Ensures proper centering within body */
+  width: 100%; /* Makes sure the text aligns centrally on large screens */
+}
 
-    #nextUp {
-      font-size: 2em;
-      margin-bottom: 10px;
-    }
+#nextUp {
+  font-size: 2em;
+  margin-bottom: 10px;
+}
 
-    #nextTimer {
-      font-size: 6em;
-      margin-bottom: 40px;
-    }
+#nextTimer {
+  font-size: 6em;
+  margin-bottom: 40px;
+}
 
-    .event-row {
-      display: flex;
-      justify-content: center;
-      gap: 40px;
-      margin-bottom: 20px;
-      font-size: 1.5em;
-    }
+.event-row {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 20px;
+  font-size: 1.5em;
+}
 
-    .event-name {
-      min-width: 240px;
-      text-align: right;
-    }
+.event-name {
+  min-width: 240px;
+  text-align: right;
+}
 
-    .event-time {
-      text-align: left;
-    }
+.event-time {
+  text-align: left;
+}
   </style>
 </head>
 <body>
@@ -141,7 +148,6 @@
 
       let nextLabel = soonest.name;
       if (soonest.name === "Ley-Line Anomaly") {
-        // Determine the index in the Ley-Line schedule
         const leyTimes = events.find(e => e.name === "Ley-Line Anomaly").times.map(parseTimeToDate).sort((a, b) => a - b);
         const nextLey = leyTimes.find(t => t > now);
         const index = leyTimes.indexOf(nextLey);
