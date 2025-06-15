@@ -4,55 +4,87 @@
   <meta charset="UTF-8">
   <title>Game Event Timers</title>
   <style>
- body {
-  background-image: url('https://images.unsplash.com/photo-1578662996442-48f60103fc96');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  color: white;
-  text-align: center; /* This centers inline content */
-  padding: 40px 20px; /* Optional: gives spacing around content */
-}
+    body {
+      background-image: url('https://images.unsplash.com/photo-1578662996442-48f60103fc96');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      color: white;
+      text-align: center;
+      padding: 40px 20px;
+    }
 
-#nextUp,
-#nextTimer {
-  display: inline-block; /* Ensures proper centering within body */
-  width: 100%; /* Makes sure the text aligns centrally on large screens */
-}
+    #nextUp,
+    #nextTimer {
+      display: inline-block;
+      width: 100%;
+    }
 
-#nextUp {
-  font-size: 2em;
-  margin-bottom: 10px;
-}
+    #nextUp {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
 
-#nextTimer {
-  font-size: 6em;
-  margin-bottom: 40px;
-}
+    #nextTimer {
+      font-size: 6em;
+      margin-bottom: 40px;
+    }
 
-.event-row {
-  display: flex;
-  justify-content: center;
-  gap: 40px;
-  margin-bottom: 20px;
-  font-size: 1.5em;
-}
+    .event-row {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+    }
 
-.event-name {
-  min-width: 240px;
-  text-align: right;
-}
+    .event-name {
+      min-width: 240px;
+      text-align: right;
+    }
 
-.event-time {
-  text-align: left;
-}
+    .event-time {
+      text-align: left;
+    }
+
+    #weekly-timers {
+      margin-top: 60px;
+      font-size: 1.5em;
+    }
+
+    .weekly-row {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 10px;
+    }
+
+    .weekly-label {
+      min-width: 240px;
+      text-align: right;
+    }
+
+    .weekly-time {
+      text-align: left;
+    }
   </style>
 </head>
 <body>
   <div id="nextUp">Next up: --</div>
   <div id="nextTimer">--:--</div>
   <div id="eventList"></div>
+
+  <div id="weekly-timers">
+    <div class="weekly-row">
+      <div class="weekly-label">Weekly vault reset</div>
+      <div class="weekly-time">Monday 09:30 (<span id="vault-countdown"></span>)</div>
+    </div>
+    <div class="weekly-row">
+      <div class="weekly-label">Weekly WvW reset</div>
+      <div class="weekly-time">Friday 20:00 (<span id="wvw-countdown"></span>)</div>
+    </div>
+  </div>
 
   <script>
     const events = [
@@ -75,13 +107,30 @@
 
     function formatTimeRemaining(ms) {
       const totalSeconds = Math.floor(ms / 1000);
-      const hours = Math.floor(totalSeconds / 3600);
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
-      const seconds = totalSeconds % 60;
 
-      if (hours > 0) return `in ${hours} hour${hours > 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
-      if (minutes > 0) return `in ${minutes} minute${minutes !== 1 ? "s" : ""}`;
-      return `in ${seconds} second${seconds !== 1 ? "s" : ""}`;
+      let parts = [];
+      if (days > 0) parts.push(`${days} day${days !== 1 ? "s" : ""}`);
+      if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
+      if (minutes > 0) parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
+      if (parts.length === 0) return "less than a minute";
+      return "in " + parts.join(" ");
+    }
+
+    function getNextWeeklyTime(targetDay, hour, minute) {
+      const now = new Date();
+      const result = new Date(now);
+      result.setHours(hour, minute, 0, 0);
+      const currentDay = now.getDay();
+      const deltaDays = (targetDay + 7 - currentDay) % 7 || 7;
+      if (deltaDays === 0 && result < now) {
+        result.setDate(now.getDate() + 7);
+      } else {
+        result.setDate(now.getDate() + deltaDays);
+      }
+      return result;
     }
 
     function updateTimers() {
@@ -109,10 +158,8 @@
         };
       });
 
-      // Sort events by timeLeft
       upcomingEvents.sort((a, b) => a.timeLeft - b.timeLeft);
 
-      // Render events
       upcomingEvents.forEach(event => {
         const row = document.createElement("div");
         row.className = "event-row";
@@ -131,19 +178,16 @@
         eventListDiv.appendChild(row);
       });
 
-      // Update top timer
       const topMs = soonest.time - now;
       const totalSeconds = Math.floor(topMs / 1000);
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
       const seconds = totalSeconds % 60;
-
       let countdownText = '';
       if (hours > 0) {
         countdownText += String(hours).padStart(2, '0') + ':';
       }
       countdownText += String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-
       document.getElementById("nextTimer").textContent = countdownText;
 
       let nextLabel = soonest.name;
@@ -156,6 +200,13 @@
       }
 
       document.getElementById("nextUp").textContent = `Next up: ${nextLabel}`;
+
+      // Weekly countdown updates
+      const vaultTime = getNextWeeklyTime(1, 9, 30); // Monday 09:30
+      const wvwTime = getNextWeeklyTime(5, 20, 0);   // Friday 20:00
+
+      document.getElementById("vault-countdown").textContent = formatTimeRemaining(vaultTime - now);
+      document.getElementById("wvw-countdown").textContent = formatTimeRemaining(wvwTime - now);
     }
 
     updateTimers();
