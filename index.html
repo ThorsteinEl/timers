@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Game Event Timers</title>
+  <style>
+    body {
+      background-color: #111;
+      color: white;
+      font-family: "Segoe UI", sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 40px 20px;
+    }
+
+    #nextUp {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    #nextTimer {
+      font-size: 6em;
+      margin-bottom: 40px;
+    }
+
+    .event-row {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-bottom: 20px;
+      font-size: 1.5em;
+    }
+
+    .event-name {
+      min-width: 240px;
+      text-align: right;
+    }
+
+    .event-time {
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <div id="nextUp">Next up: --</div>
+  <div id="nextTimer">--:--</div>
+  <div id="eventList"></div>
+
+  <script>
+    const events = [
+      { name: "Convergences: Nayos", times: ["00:30", "03:30", "06:30", "09:30", "12:30", "15:30", "18:30", "21:30"] },
+      { name: "Ley-Line Anomaly", times: ["00:20", "02:20", "04:20", "06:20", "08:20", "10:20", "12:20", "14:20", "16:20", "18:20", "20:20", "22:20"] },
+      { name: "Convergence: Balrior", times: ["02:00", "05:00", "08:00", "11:00", "14:00", "17:00", "20:00", "23:00"] },
+    ];
+
+    const leyLineLocations = ["Gendarran Fields", "Timberline Falls", "Iron Marches"];
+
+    function parseTimeToDate(timeStr) {
+      const [hours, minutes] = timeStr.split(":").map(Number);
+      const now = new Date();
+      const date = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+      if (date < now) {
+        date.setDate(date.getDate() + 1);
+      }
+      return date;
+    }
+
+    function formatTimeRemaining(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      if (hours > 0) return `in ${hours} hour${hours > 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+      if (minutes > 0) return `in ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+      return `in ${seconds} second${seconds !== 1 ? "s" : ""}`;
+    }
+
+    function updateTimers() {
+      const now = new Date();
+      let soonest = null;
+      const eventListDiv = document.getElementById("eventList");
+      eventListDiv.innerHTML = "";
+
+      const upcomingEvents = events.map(event => {
+        const upcomingTimes = event.times
+          .map(time => parseTimeToDate(time))
+          .sort((a, b) => a - b);
+
+        const next = upcomingTimes.find(t => t > now);
+        const timeLeft = next - now;
+
+        if (!soonest || timeLeft < soonest.timeLeft) {
+          soonest = { name: event.name, time: next, timeLeft };
+        }
+
+        return {
+          name: event.name,
+          time: next,
+          timeLeft
+        };
+      });
+
+      // Sort events by timeLeft
+      upcomingEvents.sort((a, b) => a.timeLeft - b.timeLeft);
+
+      // Render events
+      upcomingEvents.forEach(event => {
+        const row = document.createElement("div");
+        row.className = "event-row";
+
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "event-name";
+        nameDiv.textContent = event.name;
+
+        const timeStr = event.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+        const timeDiv = document.createElement("div");
+        timeDiv.className = "event-time";
+        timeDiv.textContent = `${timeStr} (${formatTimeRemaining(event.timeLeft)})`;
+
+        row.appendChild(nameDiv);
+        row.appendChild(timeDiv);
+        eventListDiv.appendChild(row);
+      });
+
+      // Update top timer
+      const topMs = soonest.time - now;
+      const totalSeconds = Math.floor(topMs / 1000);
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+
+      let countdownText = '';
+      if (hours > 0) {
+        countdownText += String(hours).padStart(2, '0') + ':';
+      }
+      countdownText += String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+
+      document.getElementById("nextTimer").textContent = countdownText;
+
+      let nextLabel = soonest.name;
+      if (soonest.name === "Ley-Line Anomaly") {
+        // Determine the index in the Ley-Line schedule
+        const leyTimes = events.find(e => e.name === "Ley-Line Anomaly").times.map(parseTimeToDate).sort((a, b) => a - b);
+        const nextLey = leyTimes.find(t => t > now);
+        const index = leyTimes.indexOf(nextLey);
+        const location = leyLineLocations[index % leyLineLocations.length];
+        nextLabel += ` (${location})`;
+      }
+
+      document.getElementById("nextUp").textContent = `Next up: ${nextLabel}`;
+    }
+
+    updateTimers();
+    setInterval(updateTimers, 1000);
+  </script>
+</body>
+</html>
